@@ -11,89 +11,9 @@ model User {
   id             Int      @id @default(autoincrement())
   nombre         String   @db.VarChar(100)
   email          String   @unique @db.VarChar(150)
-  hashContrasena String   @db.VarChar(255)
+  hashContraseña String   @db.VarChar(255)
   moneda         String   @default("USD") @db.VarChar(10)
- // saldo          Decimal  @default(0.00) @db.Decimal(15, 2)
   createdAt      DateTime @default(now())
 
-  transferenciasEnviadas  Transfer[]        @relation("TransferenciasEnviadas")
-  transferenciasRecibidas Transfer[]        @relation("TransferenciasRecibidas")
-  depositos               Deposit[]
-  metas                   SavingsGoal[]
-  movimientosMetas        SavingsMovement[]
-
-  @@map("users")
-}
-
-model Transfer {
-  id               Int      @id @default(autoincrement())
-  emisorId         Int
-  receptorId       Int
-  montoEnviado     Decimal  @db.Decimal(15, 2)
-  monedaOrigen     String   @db.VarChar(10)
-  monedaDestino    String   @db.VarChar(10)
-  tipoCambio       Decimal  @db.Decimal(20, 6)
-  tasaComision     Decimal  @db.Decimal(5, 4)
-  montoComision    Decimal  @db.Decimal(15, 2)
-  totalDeducido    Decimal  @db.Decimal(15, 2)
-  totalDeducidoUsd Decimal  @db.Decimal(15, 2)
-  montoRecibido    Decimal  @db.Decimal(15, 2)
-  estado           String   @default("pendiente") @db.VarChar(20)
-  createdAt        DateTime @default(now())
-
-  emisor   User @relation("TransferenciasEnviadas", fields: [emisorId], references: [id])
-  receptor User @relation("TransferenciasRecibidas", fields: [receptorId], references: [id])
-
-  @@index([emisorId, createdAt])
-  @@map("transfers")
-}
-
-model Deposit {
-  id            Int      @id @default(autoincrement())
-  usuarioId     Int
-  monto         Decimal  @db.Decimal(15, 2)
-  moneda        String   @db.VarChar(10)
-  saldoAntes    Decimal  @db.Decimal(15, 2)
-  saldoDespues  Decimal  @db.Decimal(15, 2)
-  estado        String   @default("completado") @db.VarChar(20)
-  createdAt     DateTime @default(now())
-
-  usuario User @relation(fields: [usuarioId], references: [id])
-
-  @@index([usuarioId])
-  @@map("deposits")
-}
-
-model SavingsGoal {
-  id            Int      @id @default(autoincrement())
-  usuarioId     Int
-  nombre        String   @db.VarChar(150)
-  montoObjetivo Decimal  @db.Decimal(15, 2)
-  montoActual   Decimal  @default(0.00) @db.Decimal(15, 2)
-  moneda        String   @db.VarChar(10)
-  estado        String   @default("activa") @db.VarChar(20)
-  createdAt     DateTime @default(now())
-
-  usuario    User              @relation(fields: [usuarioId], references: [id])
-  movimientos SavingsMovement[]
-
-  @@index([usuarioId])
-  @@map("savings_goals")
-}
-
-model SavingsMovement {
-  id           Int      @id @default(autoincrement())
-  metaId       Int
-  usuarioId    Int
-  tipo         String   @db.VarChar(20)
-  monto        Decimal  @db.Decimal(15, 2)
-  saldoAntes   Decimal  @db.Decimal(15, 2)
-  saldoDespues Decimal  @db.Decimal(15, 2)
-  createdAt    DateTime @default(now())
-
-  meta    SavingsGoal @relation(fields: [metaId], references: [id])
-  usuario User        @relation(fields: [usuarioId], references: [id])
-
-  @@index([metaId])
-  @@map("savings_movements")
+  @@map("Usuarios")
 }
