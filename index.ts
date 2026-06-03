@@ -1,12 +1,12 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
 
-// const authRoutes = require('./src/routes/auth.routes');
-// const walletRoutes = require('./src/routes/wallet.routes');
-// const transferRoutes = require('./src/routes/transfer.routes');
-// const savingsRoutes = require('./src/routes/savings.routes');
-// const errorHandler = require('./src/middleware/errorHandler');
+// import authRoutes from './src/routes/auth.routes';
+// import walletRoutes from './src/routes/wallet.routes';
+// import transferRoutes from './src/routes/transfer.routes';
+// import savingsRoutes from './src/routes/savings.routes';
+// import errorHandler from './src/middleware/errorHandler';
 
 const app = express();
 
