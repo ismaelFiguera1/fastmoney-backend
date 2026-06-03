@@ -1,3 +1,5 @@
 node_modules/
 .env
 *.pdf
+
+/src/generated/prisma
