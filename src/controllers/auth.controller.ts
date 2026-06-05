@@ -6,24 +6,28 @@ export async function me(req: Request, res: Response) {
 }
 
 export async function registrar(req: Request, res: Response) {
-  const { nombre, email, password } = req.body;
+  const { name, lastName, email, password } = req.body;
+  const nombre = name,
+    apellido = lastName;
 
-  if (!nombre || !email || !password) {
+  if (!nombre || !apellido || !email || !password) {
     res
       .status(400)
-      .json({ message: "Nombre, email y contraseña son obligatorios" });
+      .json({
+        message: "Nombre, apellido, email y contraseña son obligatorios",
+      });
     return;
   }
 
-  if (password.length < 6) {
+  if (password.length < 8) {
     res
       .status(400)
-      .json({ message: "La contraseña debe tener al menos 6 caracteres" });
+      .json({ message: "La contraseña debe tener al menos 8 caracteres" });
     return;
   }
 
   try {
-    const usuario = await registrarUsuario(nombre, email, password);
+    const usuario = await registrarUsuario(nombre, apellido, email, password);
     res
       .status(201)
       .json({ message: "Usuario registrado correctamente", usuario });
@@ -41,6 +45,11 @@ export async function login(req: Request, res: Response) {
 
   if (!email || !password) {
     res.status(400).json({ message: "Email y contraseña son obligatorios" });
+    return;
+  }
+
+  if (password.length < 8) {
+    res.status(400).json({ message: "La contraseña debe tener al menos 8 caracteres" });
     return;
   }
 
