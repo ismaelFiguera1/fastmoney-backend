@@ -11,11 +11,9 @@ export async function registrar(req: Request, res: Response) {
     apellido = lastName;
 
   if (!nombre || !apellido || !email || !password) {
-    res
-      .status(400)
-      .json({
-        message: "Nombre, apellido, email y contraseña son obligatorios",
-      });
+    res.status(400).json({
+      message: "Nombre, apellido, email y contraseña son obligatorios",
+    });
     return;
   }
 
@@ -49,7 +47,9 @@ export async function login(req: Request, res: Response) {
   }
 
   if (password.length < 8) {
-    res.status(400).json({ message: "La contraseña debe tener al menos 8 caracteres" });
+    res
+      .status(400)
+      .json({ message: "La contraseña debe tener al menos 8 caracteres" });
     return;
   }
 
