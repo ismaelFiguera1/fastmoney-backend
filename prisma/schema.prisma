@@ -7,13 +7,14 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
+model Usuario {
   id             Int      @id @default(autoincrement())
   nombre         String   @db.VarChar(100)
   email          String   @unique @db.VarChar(150)
-  hashContraseña String   @db.VarChar(255)
+  hashContrasena String   @db.VarChar(255)
   moneda         String   @default("USD") @db.VarChar(10)
-  createdAt      DateTime @default(now())
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
 
   @@map("Usuarios")
 }
