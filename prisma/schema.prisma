@@ -13,9 +13,38 @@ model Usuario {
   apellido       String   @db.VarChar(100)
   email          String   @unique @db.VarChar(150)
   hashContrasena String   @db.VarChar(255)
-  moneda         String   @default("USD") @db.VarChar(10)
-  creadoEn       DateTime @default(now())
-  actualizadoEn  DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  cuenta         Cuenta?
 
   @@map("Usuarios")
+}
+
+model Cuenta {
+  id             Int      @id @default(autoincrement())
+  usuarioId      Int      @unique
+  codigoCuenta   String   @unique @db.VarChar(36)
+  monedaBase     String   @default("USD") @db.VarChar(10)
+  activa         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  usuario       Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  saldos        SaldoPorMoneda[]
+
+  @@map("Cuentas")
+}
+
+model SaldoPorMoneda {
+  id        Int      @id @default(autoincrement())
+  cuentaId  Int
+  moneda    String   @db.VarChar(10)
+  saldo     Decimal  @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cuenta    Cuenta   @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
+
+  @@unique([cuentaId, moneda])
+  @@map("SaldosPorMoneda")
 }
