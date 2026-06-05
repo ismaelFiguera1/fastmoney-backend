@@ -1,8 +1,11 @@
 import { Router } from 'express';
-import { register } from '../controllers/auth.controller';
+import { registrar, login, me } from '../controllers/auth.controller';
+import { verificarToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.post('/register', register);
+router.post('/register', registrar);
+router.post('/login', login);
+router.get('/me', verificarToken, me);
 
 export default router;
