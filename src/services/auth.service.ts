@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 
-export async function registrarUsuario(nombre: string, email: string, password: string) {
+export async function registrarUsuario(nombre: string, apellido: string, email: string, password: string) {
   const usuarioExistente = await prisma.usuario.findUnique({ where: { email } });
   if (usuarioExistente) {
     throw new Error('El email ya está registrado');
@@ -11,10 +11,10 @@ export async function registrarUsuario(nombre: string, email: string, password: 
   const hashContrasena = await bcrypt.hash(password, 10);
 
   const usuario = await prisma.usuario.create({
-    data: { nombre, email, hashContrasena },
+    data: { nombre, apellido, email, hashContrasena },
   });
 
-  return { id: usuario.id, nombre: usuario.nombre, email: usuario.email };
+  return { id: usuario.id, nombre: usuario.nombre, apellido: usuario.apellido, email: usuario.email };
 }
 
 export async function iniciarSesion(email: string, password: string) {
