@@ -30,21 +30,22 @@ model Cuenta {
   updatedAt      DateTime @updatedAt
 
   usuario       Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-  saldos        SaldoPorMoneda[]
+  saldos        SaldoPorMoneda?
 
   @@map("Cuentas")
 }
 
 model SaldoPorMoneda {
   id        Int      @id @default(autoincrement())
-  cuentaId  Int
-  moneda    String   @db.VarChar(10)
-  saldo     Decimal  @default(0)
+  cuentaId  Int      @unique
+  usd       Decimal  @default(0) @db.Decimal(18, 2)
+  eur       Decimal  @default(0) @db.Decimal(18, 2)
+  ars       Decimal  @default(0) @db.Decimal(18, 2)
+  cop       Decimal  @default(0) @db.Decimal(18, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   cuenta    Cuenta   @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
 
-  @@unique([cuentaId, moneda])
   @@map("SaldosPorMoneda")
 }
