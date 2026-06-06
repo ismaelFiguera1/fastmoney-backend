@@ -18,21 +18,39 @@ export async function registrarUsuario(
 
   const hashContrasena = await bcrypt.hash(password, 10);
 
-  const usuario = await prisma.$transaction(async (tx) => {
-    const nuevoUsuario = await tx.usuario.create({
-      data: { nombre, apellido, email, hashContrasena },
-    });
+  let usuario;
+  try {
+    usuario = await prisma.$transaction(async (tx) => {
+      const nuevoUsuario = await tx.usuario.create({
+        data: { nombre, apellido, email, hashContrasena },
+      });
 
-    await tx.cuenta.create({
-      data: {
-        usuarioId: nuevoUsuario.id,
-        codigoCuenta: randomUUID(),
-        monedaBase: "USD",
-      },
-    });
+      const nuevaCuenta = await tx.cuenta.create({
+        data: {
+          usuarioId: nuevoUsuario.id,
+          codigoCuenta: randomUUID(),
+          monedaBase: "USD",
+        },
+      });
 
-    return nuevoUsuario;
-  });
+      await tx.saldoPorMoneda.create({
+        data: {
+          cuentaId: nuevaCuenta.id,
+          usd: 0,
+          eur: 0,
+          ars: 0,
+          cop: 0,
+        },
+      });
+
+      return nuevoUsuario;
+    });
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      throw new Error("El email ya está registrado");
+    }
+    throw error;
+  }
 
   return {
     id: usuario.id,
@@ -64,6 +82,11 @@ export async function iniciarSesion(email: string, password: string) {
 
   return {
     token,
-    usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email },
+    usuario: {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      email: usuario.email,
+    },
   };
 }

@@ -2,10 +2,12 @@ import { Request, Response } from "express";
 import { registrarUsuario, iniciarSesion } from "../services/auth.service";
 
 export async function me(req: Request, res: Response) {
+
   res.status(200).json({ usuario: req.usuario });
 }
 
 export async function registrar(req: Request, res: Response) {
+
   const { name, lastName, email, password } = req.body;
   const nombre = name,
     apellido = lastName;
@@ -39,6 +41,7 @@ export async function registrar(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
+
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -46,17 +49,11 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
-  if (password.length < 8) {
-    res
-      .status(400)
-      .json({ message: "La contraseña debe tener al menos 8 caracteres" });
-    return;
-  }
-
   try {
     const resultado = await iniciarSesion(email, password);
     res.status(200).json({ message: "Login correcto", ...resultado });
   } catch (error: any) {
+
     if (error.message === "Email o contraseña incorrectos") {
       res.status(401).json({ message: error.message });
       return;
