@@ -34,13 +34,7 @@ export async function registrarUsuario(
       });
 
       await tx.saldoPorMoneda.create({
-        data: {
-          cuentaId: nuevaCuenta.id,
-          usd: 0,
-          eur: 0,
-          ars: 0,
-          cop: 0,
-        },
+        data: { cuentaId: nuevaCuenta.id },
       });
 
       return nuevoUsuario;
@@ -77,7 +71,7 @@ export async function iniciarSesion(email: string, password: string) {
   const token = jwt.sign(
     { id: usuario.id, email: usuario.email },
     process.env.JWT_SECRET as string,
-    { expiresIn: "24h" }
+    { expiresIn: process.env.JWT_EXPIRES_IN }
   );
 
   return {
