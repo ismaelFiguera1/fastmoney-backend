@@ -14,7 +14,6 @@ export function verificarToken(
   res: Response,
   next: NextFunction
 ) {
-  debugger;
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
