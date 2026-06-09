@@ -6,12 +6,27 @@ export async function me(req: Request, res: Response) {
 }
 
 export async function registrar(req: Request, res: Response) {
-  const { name: nombre, lastName: apellido, email, password } = req.body;
+  const {
+    name: nombre,
+    lastName: apellido,
+    email,
+    password,
+    monedaBase,
+  } = req.body;
 
-  if (!nombre || !apellido || !email || !password) {
+  if (!nombre || !apellido || !email || !password || !monedaBase) {
     res.status(400).json({
-      message: "Nombre, apellido, email y contraseña son obligatorios",
+      message:
+        "Nombre, apellido, email, contraseña y moneda base son obligatorios",
     });
+    return;
+  }
+
+  const MONEDAS_VALIDAS = ["usd", "eur", "ars", "cop"];
+  if (!MONEDAS_VALIDAS.includes(monedaBase.toLowerCase())) {
+    res
+      .status(400)
+      .json({ message: "Moneda base no válida. Usa: USD, EUR, ARS o COP" });
     return;
   }
 
@@ -23,7 +38,13 @@ export async function registrar(req: Request, res: Response) {
   }
 
   try {
-    const usuario = await registrarUsuario(nombre, apellido, email, password);
+    const usuario = await registrarUsuario(
+      nombre,
+      apellido,
+      email,
+      password,
+      monedaBase.toUpperCase()
+    );
     res
       .status(201)
       .json({ message: "Usuario registrado correctamente", usuario });

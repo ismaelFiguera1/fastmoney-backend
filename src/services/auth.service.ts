@@ -7,7 +7,8 @@ export async function registrarUsuario(
   nombre: string,
   apellido: string,
   email: string,
-  password: string
+  password: string,
+  monedaBase: string
 ) {
   const usuarioExistente = await prisma.usuario.findUnique({
     where: { email },
@@ -29,12 +30,18 @@ export async function registrarUsuario(
         data: {
           usuarioId: nuevoUsuario.id,
           codigoCuenta: randomUUID(),
-          monedaBase: "USD",
+          monedaBase,
         },
       });
 
       await tx.saldoPorMoneda.create({
-        data: { cuentaId: nuevaCuenta.id },
+        data: {
+          cuentaId: nuevaCuenta.id,
+          usd: 2000,
+          eur: 2000,
+          ars: 10000,
+          cop: 10000,
+        },
       });
 
       return nuevoUsuario;
@@ -71,7 +78,7 @@ export async function iniciarSesion(email: string, password: string) {
   const token = jwt.sign(
     { id: usuario.id, email: usuario.email },
     process.env.JWT_SECRET as string,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    { expiresIn: (process.env.JWT_EXPIRES_IN ?? "24h") as any }
   );
 
   return {
