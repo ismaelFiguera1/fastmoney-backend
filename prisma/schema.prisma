@@ -29,8 +29,10 @@ model Cuenta {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  usuario       Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-  saldos        SaldoPorMoneda?
+  usuario                 Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  saldos                  SaldoPorMoneda?
+  transferenciasEnviadas  Transferencia[]  @relation("TransferenciasEnviadas")
+  transferenciasRecibidas Transferencia[]  @relation("TransferenciasRecibidas")
 
   @@map("Cuentas")
 }
@@ -48,4 +50,19 @@ model SaldoPorMoneda {
   cuenta    Cuenta   @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
 
   @@map("SaldosPorMoneda")
+}
+
+model Transferencia {
+  id              Int      @id @default(autoincrement())
+  cuentaOrigenId  Int
+  cuentaDestinoId Int
+  moneda          String   @db.VarChar(10)
+  monto           Decimal  @db.Decimal(18, 2)
+  comision        Decimal  @db.Decimal(18, 2)
+  createdAt       DateTime @default(now())
+
+  cuentaOrigen  Cuenta @relation("TransferenciasEnviadas", fields: [cuentaOrigenId], references: [id], onDelete: Restrict)
+  cuentaDestino Cuenta @relation("TransferenciasRecibidas", fields: [cuentaDestinoId], references: [id], onDelete: Restrict)
+
+  @@map("Transferencias")
 }
