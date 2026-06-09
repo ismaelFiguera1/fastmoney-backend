@@ -19,9 +19,8 @@ export async function registrarUsuario(
 
   const hashContrasena = await bcrypt.hash(password, 10);
 
-  let usuario;
   try {
-    usuario = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       const nuevoUsuario = await tx.usuario.create({
         data: { nombre, apellido, email, hashContrasena },
       });
@@ -43,8 +42,6 @@ export async function registrarUsuario(
           cop: 10000,
         },
       });
-
-      return nuevoUsuario;
     });
   } catch (error: any) {
     if (error.code === "P2002") {
@@ -52,17 +49,13 @@ export async function registrarUsuario(
     }
     throw error;
   }
-
-  return {
-    id: usuario.id,
-    nombre: usuario.nombre,
-    apellido: usuario.apellido,
-    email: usuario.email,
-  };
 }
 
 export async function iniciarSesion(email: string, password: string) {
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
+  const usuario = await prisma.usuario.findUnique({
+    where: { email },
+    include: { cuenta: true },
+  });
   if (!usuario) {
     throw new Error("Email o contraseña incorrectos");
   }
@@ -88,6 +81,8 @@ export async function iniciarSesion(email: string, password: string) {
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       email: usuario.email,
+      moneda: usuario.cuenta?.monedaBase || "USD",
+      codigoCuenta: usuario.cuenta?.codigoCuenta || "",
     },
   };
 }

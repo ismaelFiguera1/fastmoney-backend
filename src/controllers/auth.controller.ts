@@ -11,7 +11,7 @@ export async function registrar(req: Request, res: Response) {
     lastName: apellido,
     email,
     password,
-    monedaBase,
+    moneda: monedaBase,
   } = req.body;
 
   if (!nombre || !apellido || !email || !password || !monedaBase) {
@@ -38,16 +38,14 @@ export async function registrar(req: Request, res: Response) {
   }
 
   try {
-    const usuario = await registrarUsuario(
+    await registrarUsuario(
       nombre,
       apellido,
       email,
       password,
       monedaBase.toUpperCase()
     );
-    res
-      .status(201)
-      .json({ message: "Usuario registrado correctamente", usuario });
+    res.status(201).json({ message: "Usuario registrado correctamente" });
   } catch (error: any) {
     if (error.message === "El email ya está registrado") {
       res.status(409).json({ message: error.message });
