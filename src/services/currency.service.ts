@@ -3,12 +3,25 @@ const API_KEY = process.env.EXCHANGE_RATE_API_KEY;
 // Monedas soportadas, deben coincidir con las columnas de SaldoPorMoneda en la base de datos
 const MONEDAS_SOPORTADAS = ["usd", "eur", "ars", "cop"] as const;
 
+const OCHO_HORAS_MS = 8 * 60 * 60 * 1000;
+
+// Caché por moneda base. Ejemplo: cache["USD"] = { rates: { EUR: 0.92, ... }, timestamp: 1749600000000 }
+const cache: Record<string, { rates: Record<string, number>; timestamp: number }> = {};
+
 // Llama a la API y devuelve los tipos de cambio desde la monedaBase
 // Ejemplo: si monedaBase es "ARS", rates.USD = 0.001 significa que 1 ARS vale 0.001 USD
 export async function obtenerTasas(
   monedaBase: string
 ): Promise<Record<string, number>> {
-  const url = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${monedaBase.toUpperCase()}`;
+  const moneda = monedaBase.toUpperCase();
+  const ahora = Date.now();
+
+  // Si hay datos en caché para esta moneda y no han pasado 8 horas, los devolvemos
+  if (cache[moneda] && ahora - cache[moneda].timestamp < OCHO_HORAS_MS) {
+    return cache[moneda].rates;
+  }
+
+  const url = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${moneda}`;
 
   const respuesta = await fetch(url);
 
@@ -29,6 +42,12 @@ export async function obtenerTasas(
       }`
     );
   }
+
+  // Guardamos los datos nuevos junto con el momento actual
+  cache[moneda] = {
+    rates: datos.conversion_rates,
+    timestamp: ahora,
+  };
 
   return datos.conversion_rates;
 }
