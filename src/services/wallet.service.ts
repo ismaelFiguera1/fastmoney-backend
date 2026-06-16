@@ -1,28 +1,26 @@
 import prisma from "../config/db";
 import { obtenerTasas } from "./currency.service";
 
-export async function obtenerSaldos(usuarioId: number, moneda: string) {
+async function obtenerCuentaConSaldos(usuarioId: number) {
   const cuenta = await prisma.cuenta.findUnique({
     where: { usuarioId },
     include: { saldos: true },
   });
 
-  if (!cuenta) {
-    throw new Error("Cuenta no encontrada");
-  }
+  if (!cuenta) throw new Error("Cuenta no encontrada");
+  if (!cuenta.saldos) throw new Error("Saldos no encontrados");
 
-  if (!cuenta.saldos) {
-    throw new Error("Saldos no encontrados");
-  }
-
-  // Convertimos a number porque Prisma devuelve Decimal, no number
-  const saldos = {
+  // Prisma devuelve Decimal, lo convertimos a number
+  return {
     usd: Number(cuenta.saldos.usd),
     eur: Number(cuenta.saldos.eur),
     ars: Number(cuenta.saldos.ars),
     cop: Number(cuenta.saldos.cop),
   };
+}
 
+export async function obtenerSaldos(usuarioId: number, moneda: string) {
+  const saldos = await obtenerCuentaConSaldos(usuarioId);
   const matriz = await obtenerTasas();
 
   const saldoTotal = parseFloat(
@@ -34,11 +32,11 @@ export async function obtenerSaldos(usuarioId: number, moneda: string) {
     ).toFixed(2)
   );
 
-  return {
-    moneda,
-    saldoTotal,
-    desglose: saldos,
-  };
+  return { moneda, saldoTotal };
+}
+
+export async function obtenerDesglose(usuarioId: number) {
+  return await obtenerCuentaConSaldos(usuarioId);
 }
 
 export async function obtenerTasasDeCambio() {
