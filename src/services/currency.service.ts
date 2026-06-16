@@ -1,7 +1,5 @@
 const API_KEY = process.env.EXCHANGE_RATE_API_KEY;
 
-const MONEDAS_SOPORTADAS = ["usd", "eur", "ars", "cop"] as const;
-
 const OCHO_HORAS_MS = 8 * 60 * 60 * 1000;
 
 const MONEDAS = ["USD", "EUR", "ARS", "COP"] as const;
@@ -53,14 +51,3 @@ export async function obtenerTasas(): Promise<Record<string, Record<string, numb
   return resultado;
 }
 
-// Convierte todos los saldos a la moneda base y devuelve el total
-export function calcularTotalEnMonedaBase(
-  saldos: { usd: number; eur: number; ars: number; cop: number },
-  rates: Record<string, number>
-): number {
-  let total = 0;
-  for (const moneda of MONEDAS_SOPORTADAS) {
-    total += saldos[moneda] / rates[moneda.toUpperCase()];
-  }
-  return total;
-}
