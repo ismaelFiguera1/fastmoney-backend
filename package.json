@@ -13,11 +13,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-<<<<<<< HEAD
     "@google/generative-ai": "^0.24.1",
-=======
     "@aws-sdk/client-ses": "^3.1069.0",
->>>>>>> 5005ea6d416861fc6b7e1635aa259289643c4af5
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",
