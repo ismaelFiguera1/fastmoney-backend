@@ -34,6 +34,7 @@ model Cuenta {
   transferenciasEnviadas  Transferencia[]  @relation("TransferenciasEnviadas")
   transferenciasRecibidas Transferencia[]  @relation("TransferenciasRecibidas")
   metaAhorro              MetaAhorro?
+  depositos               Deposito[]
 
   @@map("Cuentas")
 }
@@ -67,6 +68,18 @@ model MetaAhorro {
   cuenta        Cuenta   @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
 
   @@map("MetasAhorro")
+}
+
+model Deposito {
+  id        Int      @id @default(autoincrement())
+  cuentaId  Int
+  moneda    String   @db.VarChar(10)
+  monto     Decimal  @db.Decimal(18, 2)
+  createdAt DateTime @default(now())
+
+  cuenta    Cuenta   @relation(fields: [cuentaId], references: [id], onDelete: Restrict)
+
+  @@map("Depositos")
 }
 
 model Transferencia {
