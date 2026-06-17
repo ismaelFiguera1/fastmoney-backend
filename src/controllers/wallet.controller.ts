@@ -6,6 +6,7 @@ import {
 } from "../services/wallet.service";
 
 export async function balance(req: Request, res: Response) {
+  debugger;
   try {
     const moneda = (req.params.moneda as string)?.toUpperCase();
 
