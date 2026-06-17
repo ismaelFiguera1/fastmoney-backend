@@ -9,8 +9,30 @@ export async function realizarDeposito(usuarioId: number, moneda: string, monto:
 
   const campo = moneda.toLowerCase() as "usd" | "eur" | "ars" | "cop";
 
-  await prisma.saldoPorMoneda.update({
+  await prisma.$transaction([
+    prisma.saldoPorMoneda.update({
+      where: { cuentaId: cuenta.id },
+      data: { [campo]: { increment: monto } },
+    }),
+    prisma.deposito.create({
+      data: {
+        cuentaId: cuenta.id,
+        moneda,
+        monto,
+      },
+    }),
+  ]);
+}
+
+export async function obtenerHistorialDepositos(usuarioId: number) {
+  const cuenta = await prisma.cuenta.findUnique({
+    where: { usuarioId },
+  });
+
+  if (!cuenta) throw new Error("Cuenta no encontrada");
+
+  return prisma.deposito.findMany({
     where: { cuentaId: cuenta.id },
-    data: { [campo]: { increment: monto } },
+    orderBy: { createdAt: "desc" },
   });
 }
