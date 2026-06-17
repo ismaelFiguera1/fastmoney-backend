@@ -10,7 +10,6 @@ import {
 const MONEDAS_VALIDAS = ["USD", "EUR", "ARS", "COP"];
 
 export async function getMeta(req: Request, res: Response) {
-  debugger;
   try {
     const meta = await obtenerMeta(req.usuario!.id);
     res.status(200).json({ meta });
@@ -24,7 +23,6 @@ export async function getMeta(req: Request, res: Response) {
 }
 
 export async function postMeta(req: Request, res: Response) {
-  debugger;
   const { nombre, limite, divisa, imagen } = req.body;
 
   if (!nombre || typeof nombre !== "string" || !nombre.trim()) {
@@ -70,7 +68,6 @@ export async function postMeta(req: Request, res: Response) {
 }
 
 export async function postAportar(req: Request, res: Response) {
-  debugger;
   const { monto } = req.body;
 
   if (!monto || typeof monto !== "number" || monto <= 0) {
@@ -103,7 +100,6 @@ export async function postAportar(req: Request, res: Response) {
 }
 
 export async function postRetirar(req: Request, res: Response) {
-  debugger;
   const { monto } = req.body;
 
   if (!monto || typeof monto !== "number" || monto <= 0) {
@@ -134,7 +130,6 @@ export async function postRetirar(req: Request, res: Response) {
 }
 
 export async function deleteMeta(req: Request, res: Response) {
-  debugger;
   try {
     await eliminarMeta(req.usuario!.id);
     res.status(200).json({
