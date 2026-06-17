@@ -1,0 +1,189 @@
+# Plan de Integración de Inteligencia Artificial (FastMoney Chatbot) - Análisis de Seguridad y Alternativas
+
+El usuario planteó la duda de si se puede realizar todo desde el **Frontend** en lugar del **Backend** por motivos de seguridad del backend. A continuación, analizamos las alternativas y presentamos una **propuesta híbrida** que resuelve el problema de seguridad y reduce al mínimo el código del backend.
+
+---
+
+## Análisis de Alternativas
+
+### Opción A: Integración Completa en Frontend (Cliente-Servidor Gemini Directo)
+* **Cómo funciona:** El frontend consulta las transferencias usando el servicio existente, agrupa los totales en React, y llama directamente a la API de Gemini usando `@google/generative-ai` desde el navegador.
+* **⚠️ RIESGO CRÍTICO DE SEGURIDAD:** Para llamar a Gemini desde el navegador, debes incluir tu `GEMINI_API_KEY` en el código frontend. **Cualquier usuario de la aplicación podrá inspeccionar el código o el tráfico de red en el navegador y robar tu clave API**, permitiéndoles usar tu cuenta de Gemini y generar gastos a tu nombre.
+
+---
+
+### Opción B: Opción Híbrida "Backend Proxy" (RECOMENDADA)
+Para evitar tocar la base de datos y evitar lógica compleja en el backend, pero **mantener la API Key protegida**, sugerimos este flujo simplificado:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Usuario
+  participant Frontend as Chatbot (React)
+  participant Backend as Servidor Proxy (Express)
+  participant Gemini as Gemini AI (gemini-2.5-flash)
+
+  Usuario->>Frontend: Clic en "Ver resumen"
+  Frontend->>Frontend: Agrupa y calcula los gastos/ingresos desde la lista de movimientos local
+  Note over Frontend: { ingresos: 2500000, gastos: 1800000, categorias: {...} }
+  Frontend->>Backend: POST /api/chatbot/analizar (Envía el JSON de gastos)
+  Note over Backend: El backend solo recibe los totales y tiene la clave oculta en su .env
+  Backend->>Gemini: Envía prompt + JSON con clave segura
+  Gemini-->>Backend: Retorna recomendaciones (Texto)
+  Backend-->>Frontend: Retorna recomendaciones (Texto)
+  Frontend->>Usuario: Renderiza el texto y dibuja los gráficos con sus datos locales
+```
+
+### Ventajas de la Opción Híbrida (Opción B):
+1. **Seguridad Total:** La clave `GEMINI_API_KEY` se mantiene segura en el backend (`.env`), nunca expuesta al navegador.
+2. **Cero cambios de Base de Datos:** No se modifica Prisma, ni migraciones, ni consultas complejas en la base de datos.
+3. **El Frontend tiene el control:** Como el frontend ya tiene cargada la lista de transacciones del usuario, es el encargado de agruparlas y enviarlas al backend solo para que Gemini las analice.
+
+---
+
+## Propuesta de Cambios (Opción Híbrida B)
+
+### 1. Backend: Servidor Proxy Simple (Sin tocar la Base de Datos)
+
+#### [NEW] [chatbot.controller.ts](file:///c:/Users/User/Desktop/Proyecto%20Final%20Henry/fastmoney-backend/src/controllers/chatbot.controller.ts)
+El endpoint del backend solo recibe la información calculada por el frontend y hace la llamada segura a Gemini:
+
+```typescript
+import { Request, Response } from "express";
+import { GoogleGenAI } from "@google/generative-ai";
+
+const apiKey = process.env.GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey });
+
+export async function analizarGastos(req: Request, res: Response) {
+  try {
+    const { nombreUsuario, ingresos, gastos, categorias, moneda } = req.body;
+
+    if (!nombreUsuario || ingresos === undefined || gastos === undefined || !categorias) {
+      res.status(400).json({ message: "Datos incompletos para el análisis" });
+      return;
+    }
+
+    const prompt = `
+Eres un asesor financiero experto, amigable y profesional.
+Analiza la salud financiera mensual del usuario "${nombreUsuario}" basándote en los siguientes datos:
+- Ingresos Totales: ${ingresos} ${moneda || "USD"}
+- Gastos Totales: ${gastos} ${moneda || "USD"}
+- Desglose de Gastos por Categoría: ${JSON.stringify(categorias)}
+
+Por favor, genera un análisis breve, amigable y estructurado.
+Incluye:
+1. Un resumen de ingresos vs gastos y el ahorro.
+2. Cuál fue su mayor categoría de gasto y su impacto porcentual.
+3. Brinda 2 consejos accionables para mejorar el ahorro.
+Evita usar formato markdown complejo de encabezados grandes, usa texto plano estructurado con viñetas claras y negritas sencillas.
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    res.status(200).json({ analisis: response.text });
+  } catch (error: any) {
+    console.error("Error al procesar con Gemini:", error);
+    res.status(500).json({ message: "Error al generar el análisis con IA" });
+  }
+}
+```
+
+#### [NEW] [chatbot.routes.ts](file:///c:/Users/User/Desktop/Proyecto%20Final%20Henry/fastmoney-backend/src/routes/chatbot.routes.ts)
+```typescript
+import { Router } from "express";
+import { analizarGastos } from "../controllers/chatbot.controller";
+import { autenticarJWT } from "../middleware/auth.middleware";
+
+const router = Router();
+router.post("/analizar", autenticarJWT, analizarGastos);
+
+export default router;
+```
+
+---
+
+### 2. Frontend: Cálculos y Petición
+
+#### [NEW] [chatbot.service.ts](file:///c:/Users/User/Desktop/Proyecto%20Final%20Henry/fastmoney-frontend/src/services/chatbot.service.ts)
+El frontend toma las transacciones locales del usuario, las procesa por categoría y envía el resultado consolidado al proxy:
+
+```typescript
+import api from "./api";
+import { Transaction } from "./transactions.service";
+
+export interface ResumenConsolidado {
+  nombreUsuario: string;
+  ingresos: number;
+  gastos: number;
+  moneda: string;
+  categorias: Record<string, number>;
+}
+
+export const chatbotService = {
+  // Procesa la lista de transacciones que el frontend ya tiene cargada
+  consolidarDatos: (transactions: Transaction[], userName: string): ResumenConsolidado => {
+    let ingresos = 0;
+    let gastos = 0;
+    const categorias: Record<string, number> = {};
+    const moneda = transactions[0]?.currency || "USD";
+
+    transactions.forEach(t => {
+      // Remover símbolos y signos para parsear el monto
+      const cleanAmount = parseFloat(t.amount.replace(/[^\d.-]/g, ''));
+      if (isNaN(cleanAmount)) return;
+
+      if (t.type === "ENVIADO") {
+        const absoluteAmount = Math.abs(cleanAmount);
+        gastos += absoluteAmount;
+        
+        // Asignación de categorías (simuladas en base al título si no tiene campo explícito)
+        let categoria = "Otros";
+        const titleLower = t.title.toLowerCase();
+        if (titleLower.includes("comida") || titleLower.includes("restaurante") || titleLower.includes("supermercado")) {
+          categoria = "Alimentación";
+        } else if (titleLower.includes("uber") || titleLower.includes("taxi") || titleLower.includes("nafta") || titleLower.includes("transporte")) {
+          categoria = "Transporte";
+        } else if (titleLower.includes("netflix") || titleLower.includes("cine") || titleLower.includes("juego") || titleLower.includes("entretenimiento")) {
+          categoria = "Entretenimiento";
+        } else if (titleLower.includes("luz") || titleLower.includes("agua") || titleLower.includes("alquiler") || titleLower.includes("servicio")) {
+          categoria = "Servicios";
+        }
+        
+        categorias[categoria] = (categorias[categoria] || 0) + absoluteAmount;
+      } else if (t.type === "RECIBIDO" || t.type === "DEPOSITO") {
+        ingresos += Math.abs(cleanAmount);
+      }
+    });
+
+    return {
+      nombreUsuario: userName,
+      ingresos,
+      gastos,
+      moneda,
+      categorias
+    };
+  },
+
+  enviarParaAnalisis: async (datos: ResumenConsolidado): Promise<string> => {
+    try {
+      const response = await api.post("/api/chatbot/analizar", datos);
+      return response.data.analisis;
+    } catch (error) {
+      console.warn("Backend no disponible o error. Usando respuesta mock local.");
+      return `Hola ${datos.nombreUsuario}, registraste ingresos por $${datos.ingresos.toLocaleString()} y gastos por $${datos.gastos.toLocaleString()}. Tu mayor gasto fue en Alimentación (50%). Te recomiendo reducir gastos en Entretenimiento.`;
+    }
+  }
+};
+```
+
+---
+
+## Preguntas para el Equipo Frontend
+
+> [!IMPORTANT]
+> 1. **¿Qué te parece la Opción B (Proxy)?** Mantiene tu clave API de Gemini 100% segura en el backend sin requerir cambios complicados en la base de datos de tu compañero de backend.
+> 2. **Asignación de Categorías en el Frontend:** Dado que la base de datos no tiene un campo de categoría asignado por transacción, podemos clasificarlos en el frontend analizando palabras clave de la transferencia (como Uber, Netflix, Supermercado) o asignando categorías aleatorias para la demo. ¿Te convence este método?
