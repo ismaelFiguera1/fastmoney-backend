@@ -111,6 +111,8 @@ export async function realizarTransferencia(
       moneda: moneda.toUpperCase(),
       transferenciaId: transferencia.id,
       fecha: transferencia.createdAt,
+      // ✅ ÚNICO CAMBIO: agregar nombre del destinatario
+      nombreDestinatario: `${cuentaDestino.usuario.nombre} ${cuentaDestino.usuario.apellido}`,
     },
   };
 }
