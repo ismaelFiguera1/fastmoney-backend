@@ -12,7 +12,7 @@ import depositoRoutes from './routes/deposito.routes';
 import ahorroRoutes from './routes/ahorro.routes';
 
 const swaggerDocument = yaml.load(
-  fs.readFileSync(path.join(__dirname, '..', 'openapi.yaml'), 'utf8')
+  fs.readFileSync(path.join(process.cwd(), 'openapi.yaml'), 'utf8')
 ) as object;
 
 

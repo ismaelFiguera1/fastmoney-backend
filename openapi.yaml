@@ -5,6 +5,8 @@ info:
   version: 1.0.0
 
 servers:
+  - url: https://fastmoney-backend-production.up.railway.app
+    description: Servidor de producción (Railway)
   - url: http://localhost:3000
     description: Servidor local de desarrollo
 
