@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
 import prisma from "../config/db";
+import { registrarIdentidadEmail, enviarEmailBienvenida } from "./email.service";
 
 export async function registrarUsuario(
   nombre: string,
@@ -43,6 +44,12 @@ export async function registrarUsuario(
         },
       });
     });
+
+    // Intentar registrar la identidad en AWS SES y enviar el correo de bienvenida en segundo plano
+    registrarIdentidadEmail(email)
+      .then(() => enviarEmailBienvenida(email, nombre, apellido))
+      .catch((err) => console.error("Error al registrar identidad o enviar bienvenida SES:", err));
+
   } catch (error: any) {
     if (error.code === "P2002") {
       throw new Error("El email ya está registrado");

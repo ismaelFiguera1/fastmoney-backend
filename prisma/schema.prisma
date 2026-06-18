@@ -21,6 +21,19 @@ model Usuario {
   @@map("Usuarios")
 }
 
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  titulo    String   @db.VarChar(150)
+  mensaje   String
+  leido     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("Notificaciones")
+}
+
 model Cuenta {
   id             Int      @id @default(autoincrement())
   usuarioId      Int      @unique

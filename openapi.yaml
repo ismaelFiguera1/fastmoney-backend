@@ -1,0 +1,787 @@
+openapi: 3.0.3
+info:
+  title: FastMoney API
+  description: Backend de FastMoney — billetera digital multimoneda (USD, EUR, ARS, COP)
+  version: 1.0.0
+
+servers:
+  - url: https://fastmoney-backend-production.up.railway.app
+    description: Servidor de producción (Railway)
+  - url: http://localhost:3000
+    description: Servidor local de desarrollo
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+      example:
+        message: Error interno del servidor
+
+    MetaAhorro:
+      type: object
+      properties:
+        id:
+          type: integer
+        cuentaId:
+          type: integer
+        nombre:
+          type: string
+        limite:
+          type: number
+        divisa:
+          type: string
+        imagen:
+          type: string
+          nullable: true
+        saldoAhorrado:
+          type: number
+
+tags:
+  - name: General
+  - name: Auth
+  - name: Wallet
+  - name: Transferencia
+  - name: Deposito
+  - name: Ahorro
+  - name: Chatbot
+
+paths:
+
+  /api/health:
+    get:
+      summary: Health check
+      description: Verifica que el servidor está levantado y respondiendo
+      tags: [General]
+      responses:
+        "200":
+          description: Servidor funcionando
+          content:
+            application/json:
+              example:
+                status: ok
+
+  /api/auth/register:
+    post:
+      summary: Registrar usuario
+      description: Crea un nuevo usuario junto con su cuenta y saldos iniciales (2000 USD, 2000 EUR, 10000 ARS, 10000 COP)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, lastName, email, password, moneda]
+              properties:
+                name:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                moneda:
+                  type: string
+                  enum: [USD, EUR, ARS, COP]
+            example:
+              name: Ismael
+              lastName: Figuera
+              email: ismael@test.com
+              password: "12345678"
+              moneda: USD
+      responses:
+        "201":
+          description: Usuario registrado correctamente
+          content:
+            application/json:
+              example:
+                message: Usuario registrado correctamente
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              examples:
+                camposFaltantes:
+                  summary: Campos obligatorios faltantes
+                  value:
+                    message: "Nombre, apellido, email, contraseña y moneda base son obligatorios"
+                monedaInvalida:
+                  summary: Moneda no válida
+                  value:
+                    message: "Moneda base no válida. Usa: USD, EUR, ARS o COP"
+                passwordCorta:
+                  summary: Contraseña muy corta
+                  value:
+                    message: "La contraseña debe tener al menos 8 caracteres"
+        "409":
+          description: Email ya registrado
+          content:
+            application/json:
+              example:
+                message: El email ya está registrado
+
+  /api/auth/login:
+    post:
+      summary: Login
+      description: Autentica al usuario y devuelve un JWT
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+            example:
+              email: ismael@test.com
+              password: "12345678"
+      responses:
+        "200":
+          description: Login correcto
+          content:
+            application/json:
+              example:
+                message: Login correcto
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJpc21hZWxAdGVzdC5jb20ifQ.abc123
+                usuario:
+                  id: 1
+                  nombre: Ismael
+                  apellido: Figuera
+                  email: ismael@test.com
+                  moneda: USD
+                  codigoCuenta: 550e8400-e29b-41d4-a716-446655440000
+        "400":
+          description: Campos faltantes
+          content:
+            application/json:
+              example:
+                message: Email y contraseña son obligatorios
+        "401":
+          description: Credenciales incorrectas
+          content:
+            application/json:
+              example:
+                message: Email o contraseña incorrectos
+
+  /api/auth/me:
+    get:
+      summary: Obtener usuario autenticado
+      description: Devuelve los datos del usuario extraídos del JWT (id y email)
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del usuario autenticado
+          content:
+            application/json:
+              example:
+                usuario:
+                  id: 1
+                  email: ismael@test.com
+        "401":
+          description: Token no proporcionado o inválido
+          content:
+            application/json:
+              examples:
+                sinToken:
+                  summary: Sin token
+                  value:
+                    message: Token no proporcionado
+                tokenInvalido:
+                  summary: Token inválido o expirado
+                  value:
+                    message: Token inválido o expirado
+
+  /api/wallet/balance/{moneda}:
+    get:
+      summary: Saldo total convertido a una moneda
+      description: Convierte todos los saldos del usuario a la moneda indicada y devuelve el total
+      tags: [Wallet]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: moneda
+          in: path
+          required: true
+          description: Moneda destino de la conversión
+          schema:
+            type: string
+            enum: [USD, EUR, ARS, COP]
+      responses:
+        "200":
+          description: Saldo total en la moneda solicitada
+          content:
+            application/json:
+              example:
+                saldos:
+                  moneda: USD
+                  saldoTotal: 4250.75
+        "404":
+          description: Cuenta no encontrada
+          content:
+            application/json:
+              example:
+                message: Cuenta no encontrada
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/wallet/desglose:
+    get:
+      summary: Saldo desglosado por moneda
+      description: Devuelve los saldos individuales de cada moneda sin conversión
+      tags: [Wallet]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Saldos por moneda
+          content:
+            application/json:
+              example:
+                desglose:
+                  usd: 2000.00
+                  eur: 2000.00
+                  ars: 10000.00
+                  cop: 10000.00
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/wallet/tasas:
+    get:
+      summary: Matriz de tasas de cambio
+      description: Devuelve una matriz 4x4 con las tasas de cambio entre USD, EUR, ARS y COP
+      tags: [Wallet]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Tasas de cambio actualizadas
+          content:
+            application/json:
+              example:
+                tasas:
+                  USD:
+                    USD: 1
+                    EUR: 0.92
+                    ARS: 950.50
+                    COP: 4150.00
+                  EUR:
+                    USD: 1.09
+                    EUR: 1
+                    ARS: 1034.24
+                    COP: 4515.22
+                  ARS:
+                    USD: 0.00105
+                    EUR: 0.00097
+                    ARS: 1
+                    COP: 4.37
+                  COP:
+                    USD: 0.00024
+                    EUR: 0.00022
+                    ARS: 0.23
+                    COP: 1
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/wallet/convertir:
+    post:
+      summary: Convertir saldo entre monedas
+      description: Descuenta de la moneda origen y acredita en la moneda destino usando la tasa real de cambio
+      tags: [Wallet]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [monto, desdeMoneda, haciaMoneda]
+              properties:
+                monto:
+                  type: number
+                desdeMoneda:
+                  type: string
+                  enum: [USD, EUR, ARS, COP]
+                haciaMoneda:
+                  type: string
+                  enum: [USD, EUR, ARS, COP]
+            example:
+              monto: 100
+              desdeMoneda: USD
+              haciaMoneda: EUR
+      responses:
+        "200":
+          description: Conversión realizada correctamente
+          content:
+            application/json:
+              example:
+                message: Conversión realizada correctamente
+                detalle:
+                  desdeMoneda: USD
+                  haciaMoneda: EUR
+                  montoOriginal: 100
+                  montoConvertido: 92.00
+                  tasa: 0.92
+        "400":
+          description: Error de validación
+          content:
+            application/json:
+              examples:
+                saldoInsuficiente:
+                  summary: Saldo insuficiente
+                  value:
+                    message: Saldo insuficiente
+                monedasIguales:
+                  summary: Misma moneda origen y destino
+                  value:
+                    message: Las monedas de origen y destino deben ser distintas
+                monedaInvalida:
+                  summary: Moneda no válida
+                  value:
+                    message: "Moneda no válida. Usa: USD, EUR, ARS o COP"
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/transferencia:
+    post:
+      summary: Realizar transferencia
+      description: Transfiere dinero a otro usuario por su código de cuenta. Cobra una comisión del 1.5% sobre el monto enviado
+      tags: [Transferencia]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [codigoCuentaDestino, moneda, monto]
+              properties:
+                codigoCuentaDestino:
+                  type: string
+                  format: uuid
+                moneda:
+                  type: string
+                  enum: [USD, EUR, ARS, COP]
+                monto:
+                  type: number
+            example:
+              codigoCuentaDestino: 550e8400-e29b-41d4-a716-446655440000
+              moneda: USD
+              monto: 100
+      responses:
+        "200":
+          description: Transferencia realizada correctamente
+          content:
+            application/json:
+              example:
+                mensaje: Transferencia realizada correctamente
+                detalle:
+                  montoEnviado: 100
+                  comision: 1.50
+                  totalDescontado: 101.50
+                  moneda: USD
+                  transferenciaId: 5
+                  fecha: "2026-06-18T18:00:00.000Z"
+                  nombreDestinatario: Carlos López
+        "400":
+          description: Error de validación
+          content:
+            application/json:
+              examples:
+                saldoInsuficiente:
+                  summary: Saldo insuficiente
+                  value:
+                    message: "Saldo insuficiente. Necesitas 101.50 USD (monto + comisión) y tienes 50.00"
+                cuentaNoEncontrada:
+                  summary: Cuenta destino no existe
+                  value:
+                    message: Cuenta de destino no encontrada
+                mismasCuentas:
+                  summary: Transferencia a uno mismo
+                  value:
+                    message: No puedes transferirte dinero a ti mismo
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/transferencia/historial:
+    get:
+      summary: Historial de transferencias
+      description: Devuelve todas las transferencias enviadas y recibidas del usuario autenticado
+      tags: [Transferencia]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de transferencias
+          content:
+            application/json:
+              example:
+                - id: 5
+                  tipo: ENVIADA
+                  moneda: USD
+                  monto: 100
+                  comision: 1.50
+                  contraparte:
+                    nombre: Carlos
+                    apellido: López
+                  fecha: "2026-06-18T18:00:00.000Z"
+                - id: 3
+                  tipo: RECIBIDA
+                  moneda: EUR
+                  monto: 50
+                  comision: 0.75
+                  contraparte:
+                    nombre: Ana
+                    apellido: García
+                  fecha: "2026-06-17T10:30:00.000Z"
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/deposito:
+    post:
+      summary: Realizar depósito
+      description: Acredita fondos en una moneda específica de la cuenta del usuario
+      tags: [Deposito]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [moneda, monto]
+              properties:
+                moneda:
+                  type: string
+                  enum: [USD, EUR, ARS, COP]
+                monto:
+                  type: number
+            example:
+              moneda: USD
+              monto: 500
+      responses:
+        "200":
+          description: Depósito realizado correctamente
+          content:
+            application/json:
+              example:
+                message: Depósito realizado correctamente
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              example:
+                message: "Moneda no válida. Usa: USD, EUR, ARS o COP"
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/deposito/historial:
+    get:
+      summary: Historial de depósitos
+      description: Devuelve todos los depósitos realizados por el usuario autenticado
+      tags: [Deposito]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de depósitos
+          content:
+            application/json:
+              example:
+                depositos:
+                  - id: 3
+                    cuentaId: 1
+                    moneda: USD
+                    monto: 500
+                    createdAt: "2026-06-18T18:00:00.000Z"
+                  - id: 2
+                    cuentaId: 1
+                    moneda: EUR
+                    monto: 200
+                    createdAt: "2026-06-17T10:00:00.000Z"
+        "401":
+          description: Token inválido
+          content:
+            application/json:
+              example:
+                message: Token inválido o expirado
+
+  /api/ahorro:
+    get:
+      summary: Obtener meta de ahorro
+      description: Devuelve la meta de ahorro activa del usuario, o null si no tiene ninguna
+      tags: [Ahorro]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meta de ahorro activa o null
+          content:
+            application/json:
+              example:
+                meta:
+                  id: 1
+                  cuentaId: 1
+                  nombre: Viaje a Colombia
+                  limite: 500
+                  divisa: USD
+                  imagen: null
+                  saldoAhorrado: 150
+
+    post:
+      summary: Crear meta de ahorro
+      description: Crea una nueva meta de ahorro. Solo se permite tener una meta activa a la vez
+      tags: [Ahorro]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, limite, divisa]
+              properties:
+                nombre:
+                  type: string
+                limite:
+                  type: number
+                divisa:
+                  type: string
+                  enum: [USD, EUR, ARS, COP]
+                imagen:
+                  type: string
+                  nullable: true
+            example:
+              nombre: Viaje a Colombia
+              limite: 500
+              divisa: USD
+              imagen: ""
+      responses:
+        "201":
+          description: Meta creada correctamente
+          content:
+            application/json:
+              example:
+                message: Meta de ahorro creada correctamente
+                meta:
+                  id: 1
+                  cuentaId: 1
+                  nombre: Viaje a Colombia
+                  limite: 500
+                  divisa: USD
+                  imagen: null
+                  saldoAhorrado: 0
+        "409":
+          description: Ya existe una meta activa
+          content:
+            application/json:
+              example:
+                message: Ya tienes una meta de ahorro activa
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              example:
+                message: El límite debe ser un número mayor que 0
+
+    delete:
+      summary: Eliminar meta de ahorro
+      description: Elimina la meta activa y reembolsa el saldo ahorrado al balance disponible
+      tags: [Ahorro]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Meta eliminada y saldo reembolsado
+          content:
+            application/json:
+              example:
+                message: Meta de ahorro eliminada y saldo reembolsado correctamente
+        "404":
+          description: No hay meta activa
+          content:
+            application/json:
+              example:
+                message: No tienes ninguna meta de ahorro activa
+
+  /api/ahorro/aportar:
+    post:
+      summary: Aportar a meta de ahorro
+      description: Descuenta el monto del saldo disponible en la divisa de la meta y lo acredita en el saldo ahorrado
+      tags: [Ahorro]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [monto]
+              properties:
+                monto:
+                  type: number
+            example:
+              monto: 100
+      responses:
+        "200":
+          description: Aportación realizada correctamente
+          content:
+            application/json:
+              example:
+                message: Aportación realizada correctamente
+                meta:
+                  id: 1
+                  cuentaId: 1
+                  nombre: Viaje a Colombia
+                  limite: 500
+                  divisa: USD
+                  imagen: null
+                  saldoAhorrado: 250
+        "400":
+          description: Saldo insuficiente
+          content:
+            application/json:
+              example:
+                message: Saldo disponible insuficiente
+        "404":
+          description: No hay meta activa
+          content:
+            application/json:
+              example:
+                message: No tienes ninguna meta de ahorro activa
+
+  /api/ahorro/retirar:
+    post:
+      summary: Retirar de meta de ahorro
+      description: Devuelve fondos desde la meta al saldo disponible en la divisa de la meta
+      tags: [Ahorro]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [monto]
+              properties:
+                monto:
+                  type: number
+            example:
+              monto: 50
+      responses:
+        "200":
+          description: Retiro realizado correctamente
+          content:
+            application/json:
+              example:
+                message: Retiro realizado correctamente
+                meta:
+                  id: 1
+                  cuentaId: 1
+                  nombre: Viaje a Colombia
+                  limite: 500
+                  divisa: USD
+                  imagen: null
+                  saldoAhorrado: 200
+        "400":
+          description: Saldo ahorrado insuficiente
+          content:
+            application/json:
+              example:
+                message: Saldo ahorrado insuficiente
+        "404":
+          description: No hay meta activa
+          content:
+            application/json:
+              example:
+                message: No tienes ninguna meta de ahorro activa
+
+  /api/chatbot:
+    post:
+      summary: Enviar mensaje al chatbot
+      description: Procesa un mensaje de texto y devuelve una respuesta generada por IA
+      tags: [Chatbot]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mensaje]
+              properties:
+                mensaje:
+                  type: string
+            example:
+              mensaje: "¿Cuál es mi saldo actual?"
+      responses:
+        "200":
+          description: Respuesta del chatbot
+          content:
+            application/json:
+              example:
+                respuesta: "Tu saldo actual en USD es de 4250.75. ¿En qué más puedo ayudarte?"
+        "400":
+          description: Mensaje requerido
+          content:
+            application/json:
+              example:
+                message: El mensaje es requerido
+        "500":
+          description: Error al procesar el mensaje
+          content:
+            application/json:
+              example:
+                message: Error al procesar el mensaje

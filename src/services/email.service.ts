@@ -1,4 +1,4 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { SESClient, SendEmailCommand, VerifyEmailIdentityCommand } from "@aws-sdk/client-ses";
 
 // Inicialización del cliente de AWS SES
 const sesClient = new SESClient({
@@ -316,3 +316,71 @@ export async function enviarEmailsDeTransferencia(datos: DatosEmailTransferencia
     console.error("❌ Error al enviar correos mediante AWS SES:", error.message || error);
   }
 }
+
+/**
+ * Solicita la verificación de una dirección de correo como identidad en AWS SES.
+ * Es muy útil en modo Sandbox para permitir enviar correos a nuevos usuarios registrados.
+ */
+export async function registrarIdentidadEmail(email: string): Promise<void> {
+  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    console.warn("⚠️ AWS credentials not set. Skipping SES email verification registration.");
+    return;
+  }
+  try {
+    const command = new VerifyEmailIdentityCommand({ EmailAddress: email });
+    await sesClient.send(command);
+    console.log(`📧 Solicitud de verificación de identidad enviada a AWS SES para: ${email}`);
+  } catch (error: any) {
+    console.error("❌ Error al registrar identidad en AWS SES:", error.message || error);
+  }
+}
+
+/**
+ * Envía un correo electrónico de bienvenida premium al usuario tras registrarse.
+ */
+export async function enviarEmailBienvenida(email: string, nombre: string, apellido: string): Promise<void> {
+  const fromEmail = process.env.AWS_SES_FROM_EMAIL || "capitaldevs.fastmoney@gmail.com";
+
+  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    console.warn("⚠️ AWS credentials not set. Skipping welcome email.");
+    return;
+  }
+
+  const htmlContent = `
+    <h1 class="title">¡Bienvenido a FastMoney!</h1>
+    <p class="subtitle">Hola ${nombre} ${apellido}, gracias por unirte a FastMoney. Tu cuenta ha sido creada exitosamente.</p>
+    
+    <div class="amount-box" style="background: rgba(167, 139, 250, 0.08); border: 1px solid rgba(167, 139, 250, 0.2);">
+      <div class="amount-label" style="color: #a78bfa;">Beneficio de Bienvenida</div>
+      <div class="amount-value" style="color: #34d399;">¡Regalo Acreditado!</div>
+    </div>
+
+    <p style="font-size: 15px; color: #94a3b8; line-height: 1.6; text-align: center; margin-bottom: 30px;">
+      Hemos acreditado saldos promocionales en tu cuenta para que puedas empezar a operar de inmediato:<br>
+      <strong>$2.000,00 USD | €2.000,00 EUR | $10.000,00 ARS | $10.000,00 COP</strong>
+    </p>
+
+    <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/login" class="btn">Iniciar Sesión</a>
+  `;
+
+  const htmlBody = obtenerBaseHtml(htmlContent);
+
+  const command = new SendEmailCommand({
+    Destination: { ToAddresses: [email] },
+    Message: {
+      Body: {
+        Html: { Charset: "UTF-8", Data: htmlBody },
+      },
+      Subject: { Charset: "UTF-8", Data: "¡Bienvenido a FastMoney! Tu cuenta está lista" },
+    },
+    Source: fromEmail,
+  });
+
+  try {
+    await sesClient.send(command);
+    console.log(`📧 Correo de bienvenida enviado a: ${email}`);
+  } catch (error: any) {
+    console.error("❌ Error al enviar correo de bienvenida:", error.message || error);
+  }
+}
+
