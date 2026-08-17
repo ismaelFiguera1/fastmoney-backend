@@ -6,7 +6,7 @@ Backend de **FastMoney**, una billetera digital multimoneda que permite gestiona
 
 La documentación completa de la API está disponible en Swagger UI:
 
-- **Producción:** https://fastmoney-api-ismael-4827.up.railway.app/api/docs
+- **Producción:** https://fastmoney-backend-production.up.railway.app/api/docs
 - **Local:** http://localhost:3000/api/docs
 
 ## Stack tecnológico
