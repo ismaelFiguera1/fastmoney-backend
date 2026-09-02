@@ -10,6 +10,7 @@ import transferenciaRoutes from './routes/transferencia.routes';
 import chatbotRoutes from "./routes/chatbot.routes";
 import depositoRoutes from './routes/deposito.routes';
 import ahorroRoutes from './routes/ahorro.routes';
+import notificacionRoutes from "./routes/notificacion.routes";
 
 const swaggerDocument = yaml.load(
   fs.readFileSync(path.join(process.cwd(), 'openapi.yaml'), 'utf8')
@@ -25,6 +26,7 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.use("/api/notificacion", notificacionRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/wallet', walletRoutes);

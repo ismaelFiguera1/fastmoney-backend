@@ -1,5 +1,6 @@
 import prisma from "../config/db";
 import { enviarEmailsDeTransferencia } from "./email.service";
+import { crearNotificacion } from "./notificacion.service";
 
 const MONEDAS_VALIDAS = ["usd", "eur", "ars", "cop"] as const;
 type Moneda = (typeof MONEDAS_VALIDAS)[number];
@@ -100,6 +101,16 @@ export async function realizarTransferencia(
     fecha: transferencia.createdAt,
   }).catch((err) => {
     console.error("❌ Error de fondo al enviar correos de la transferencia:", err);
+  });
+
+  // ✅ Notificar al destinatario que recibió dinero
+  crearNotificacion(
+    cuentaDestino.usuario.id,
+    "TRANSFERENCIA_RECIBIDA",
+    "Has recibido dinero",
+    `${cuentaOrigen.usuario.nombre} ${cuentaOrigen.usuario.apellido} te transfirió ${monto.toFixed(2)} ${moneda.toUpperCase()}`
+  ).catch((err) => {
+    console.error("❌ Error al crear notificación:", err);
   });
 
   return {

@@ -110,3 +110,17 @@ model Transferencia {
 
   @@map("Transferencias")
 }
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  tipo      String   @db.VarChar(50)
+  titulo    String   @db.VarChar(200)
+  mensaje   String   @db.VarChar(500)
+  leida     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("Notificaciones")
+}
